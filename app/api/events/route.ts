@@ -23,9 +23,10 @@ export async function GET(req: Request) {
 
     if (query.trim()) {
       where.OR = [
-        { title: { contains: query.trim() } },
-        { description: { contains: query.trim() } },
-        { location: { contains: query.trim() } },
+        { title: { contains: query.trim(), mode: "insensitive" } },
+        { description: { contains: query.trim(), mode: "insensitive" } },
+        { location: { contains: query.trim(), mode: "insensitive" } },
+        { category: { contains: query.trim(), mode: "insensitive" } },
         { category: { contains: query.trim() } },
       ];
     }
