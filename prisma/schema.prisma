@@ -1,0 +1,192 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 String   @id @default(uuid())
+  email              String   @unique
+  passwordHash       String
+  role               String   @default("STUDENT") // STUDENT | STAFF | ADMIN
+  name               String
+  avatarUrl          String?
+  bio                String?
+  studentStaffNumber String?
+  faculty            String?
+  yearOfStudy        Int?
+  interests          String   @default("[]") // JSON string array
+  status             String   @default("ACTIVE") // ACTIVE | SUSPENDED
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  events           Event[]        @relation("AuthoredEvents")
+  rsvps            Rsvp[]
+  likes            Like[]
+  saves            Save[]
+  shares           Share[]
+  comments         Comment[]
+  following        Follow[]       @relation("FollowerRelation")
+  followers        Follow[]       @relation("FollowingRelation")
+  interactions     Interaction[]
+  notifications    Notification[]
+  reportsSubmitted Report[]       @relation("ReporterRelation")
+  reportsResolved  Report[]       @relation("ResolverRelation")
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  authorId    String
+  author      User     @relation("AuthoredEvents", fields: [authorId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  category    String
+  location    String
+  startsAt    DateTime
+  imageUrl    String?
+  capacity    Int?
+  externalUrl String?
+  status      String   @default("PUBLISHED") // DRAFT | PUBLISHED | REMOVED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rsvps        Rsvp[]
+  likes        Like[]
+  saves        Save[]
+  shares       Share[]
+  comments     Comment[]
+  interactions Interaction[]
+  reports      Report[]
+
+  @@index([authorId])
+  @@index([category])
+  @@index([startsAt])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Rsvp {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+}
+
+model Save {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, eventId])
+  @@index([userId])
+  @@index([eventId])
+}
+
+model Share {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  platform  String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  content   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventId])
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  follower    User     @relation("FollowerRelation", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("FollowingRelation", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Interaction {
+  id        String   @id @default(uuid())
+  userId    String
+  eventId   String
+  type      String   // VIEW | LIKE | COMMENT | SAVE | SHARE | RSVP | FOLLOW_HOST
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   // FOLLOW_POST | EVENT_REMINDER | COMMENT | RSVP | MODERATION
+  message   String
+  linkUrl   String?
+  isRead    Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model Report {
+  id           String   @id @default(uuid())
+  eventId      String
+  reporterId   String
+  reason       String
+  status       String   @default("PENDING") // PENDING | RESOLVED | DISMISSED
+  resolvedById String?
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  reporter     User     @relation("ReporterRelation", fields: [reporterId], references: [id], onDelete: Cascade)
+  resolvedBy   User?    @relation("ResolverRelation", fields: [resolvedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([status])
+  @@index([eventId])
+}
